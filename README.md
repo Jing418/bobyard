@@ -18,15 +18,42 @@ A sophisticated comment system built with **Django REST Framework** and **React*
    
 ## 🛠️ Setup & Installation   
 ### 1. Backend Configuration (Django + PostgreSQL)   
-**Note**: For security reasons, the database password in `backend/settings.py` has been replaced with a placeholder. Please update it to match your local environment.   
+
 1. **Prepare Database**:   
-    - Ensure PostgreSQL is installed and running.   
-    - Create the project database: `CREATE DATABASE bobyard\_db;`.   
+    - Install & Start PostgreSQL Service
+        ```
+        # macOS (Homebrew):  
+        brew install postgresql
+        brew services start postgresql
+
+        # Windows: 
+            Download and run the PostgreSQL Installer.
+            To start: Press Win + R, type services.msc, find PostgreSQL, and click Start.
+
+        # Linux: 
+        sudo apt update
+        sudo apt install postgresql postgresql-contrib
+        sudo systemctl start postgresql
+        ```
+    - Create the project database: `CREATE DATABASE bobyard_db;`. 
+    - Configure Permissions: 
+        - Option A: Use your existing PostgreSQL superuser.
+        - Option B: Create a dedicated project user:
+            Enter `psql postgres` and run:
+            ```
+            CREATE USER your_username WITH PASSWORD 'your_password';
+            GRANT ALL PRIVILEGES ON DATABASE bobyard_db TO your_username;
+            \q
+            ```
+
 2. **Create Virtual Environment** (Recommended):   
 ```
 cd backend
 python -m venv venv
-Windows: venv\Scripts\activate | macOS/Linux: source venv/bin/activate
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 ```
 
 3. **Install Dependencies**:   
