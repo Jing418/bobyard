@@ -22,40 +22,40 @@ A sophisticated comment system built with **Django REST Framework** and **React*
     - Ensure PostgreSQL is installed and running.   
     - Create the project database: `CREATE DATABASE bobyard\_db;`.   
 2. **Create Virtual Environment** (Recommended):   
-    ```
+```
 cd backend
 python -m venv venv
-# Windows: venv\Scripts\activate | macOS/Linux: source venv/bin/activate
-
+Windows: venv\Scripts\activate | macOS/Linux: source venv/bin/activate
 ```
+
 3. **Install Dependencies**:   
-    ```
-pip install -r requirements.txt
-
 ```
+pip install -r requirements.txt
+```
+
 4. **Configure Settings**:   
     - Open `backend/settings.py` and locate the `DATABASES` configuration.   
     - Enter your local PostgreSQL `USER` and `PASSWORD`.   
 5. **Initialize Data**:   
-    ```
+```
 python manage.py makemigrations
 python manage.py migrate
-
 ```
+
 6. **Start Server**: `python manage.py runserver`   
    
 ### 2. Frontend Configuration (React + Vite)   
 1. **Install Dependencies**:   
-    ```
+```
 cd frontend
 npm install
-
 ```
+
 2. **Start Development Server**:   
-    ```
-npm run dev
-
 ```
+npm run dev
+```
+
  --- 
    
 ## 📂 Repository Standards   
