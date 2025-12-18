@@ -6,13 +6,14 @@ A sophisticated comment system built with **Django REST Framework** and **React*
 - **RESTful Design**: Leveraged the `ModelViewSet` architecture to implement standard `GET`, `POST`, `PATCH`, and `DELETE` operations. By maintaining a stateless backend, the system ensures seamless horizontal scalability behind a load balancer.   
    
 ### 2. Advanced Frontend Interaction (Optimistic UI)   
-- **Zero-Latency Interactions**: Implemented an "Optimistic Update" strategy for the "Like" functionality. The UI updates instantly before the network request is initiated, significantly improving perceived performance.   
+- **Zero-Latency  Like-Toggle System**: Zero-Latency Like-Toggle System: Implemented a "Smart Toggle" strategy supporting both liking and unliking. The UI updates the count instantly (+1/-1) before the network request is initiated, with user state persisted in localStorage to ensure a seamless, high-performance experience.
 - **Timeout & Rollback Mechanism**: Integrated `AbortController` to implement a strict 5-second request timeout. If a network disruption, server downtime, or timeout occurs, the system automatically triggers a state rollback to maintain data consistency.   
    
 ### 3. Modern Tech-Focused UI   
 - **Minimalist Aesthetics**: Features a clean, tech-oriented design with a focus on typography and spacing, utilizing high-contrast backgrounds to ensure content readability.   
 - **Theme Persistence**: A responsive dark/light mode engine using CSS Variables with state persistence in `localStorage`.   
-- **Robust Image Presentation**: Includes defined image thumbnail styling with hover effects and basic aspect-ratio handling to ensure visual consistency in the comment feed.   
+- **Robust Image Presentation**: Includes defined image thumbnail styling with hover effects and basic aspect-ratio handling to ensure visual consistency in the comment feed.
+- **Unified State Management**: Efficiently handles real-time UI updates and server synchronization through a centralized React useState flow, ensuring the UI stays in sync with the backend database.   
  --- 
    
 ## 🛠️ Setup & Installation   
