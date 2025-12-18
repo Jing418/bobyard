@@ -86,56 +86,61 @@ function App() {
 
   // Optimistic Like
   const handleLike = async (id) => {
+    // 1. Check local storage to toggle state
+    const likedComments = JSON.parse(localStorage.getItem('liked_comments') || '[]');
+    const isAlreadyLiked = likedComments.includes(id);
 
-  const controller = new AbortController();
-  // 5s limit
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-  let updatedLikesValue;
+    let updatedLikesValue;
 
-  // 2. optimistic refresh ui
-  setComments((prev) => {
-    return prev.map((c) => {
-      if (c.id === id) {
-        updatedLikesValue = (c.likes || 0) + 1;
-        return { ...c, likes: updatedLikesValue };
-      }
-      return c;
-    });
-  });
-
-  try {
-    // 3. sending request
-    const res = await fetch(`http://localhost:8000/api/comments/${id}/`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ likes: updatedLikesValue }),
-      signal: controller.signal, 
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      throw new Error("Server responded with an error");
-    }
-    
-  } catch (err) {
-    // 4. deal with error
-    clearTimeout(timeoutId);
-    
-    console.error("Like failed, rolling back. Reason:", err.name === 'AbortError' ? 'Timeout' : err.message);
-
-    // UI rollback
+    // 2. Optimistic UI update (Toggle +1 or -1)
     setComments((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, likes: (c.likes || 1) - 1 } : c
-      )
+      prev.map((c) => {
+        if (c.id === id) {
+          updatedLikesValue = isAlreadyLiked ? Math.max(0, (c.likes || 0) - 1) : (c.likes || 0) + 1;
+          return { ...c, likes: updatedLikesValue };
+        }
+        return c;
+      })
     );
 
-    alert("Failed to update likes. Please check your connection.");
-  }
-};
+    try {
+      // 3. Sending request
+      const res = await fetch(`http://localhost:8000/api/comments/${id}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ likes: updatedLikesValue }),
+        signal: controller.signal,
+      });
 
+      clearTimeout(timeoutId);
+
+      if (!res.ok) throw new Error("Server responded with an error");
+
+      // 4. Update local storage on success
+      const nextLikedState = isAlreadyLiked 
+        ? likedComments.filter(favId => favId !== id) 
+        : [...likedComments, id];
+      localStorage.setItem('liked_comments', JSON.stringify(nextLikedState));
+
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.error("Like failed, rolling back. Reason:", err.name === 'AbortError' ? 'Timeout' : err.message);
+
+      // 5. Rollback UI to previous state
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, likes: isAlreadyLiked ? (c.likes || 0) + 1 : Math.max(0, (c.likes || 1) - 1) } : c
+        )
+      );
+
+      alert("Failed to update likes. Please check your connection.");
+    }
+  };
+
+  
   // Delete with confirmation
   const handleDelete = async (id) => {
     const ok = window.confirm(
