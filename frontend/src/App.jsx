@@ -25,15 +25,30 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [editingText, setEditingText] = useState("");
 
+  const [sortType, setSortType] = useState(
+    localStorage.getItem("sortType") || "DATE_ASC"
+  );
+
   // Theme (dark / light)
   const [theme, setTheme] = useState(
     localStorage.getItem("theme") || "dark"
   );
 
+  const SORT_OPTIONS = {
+    DATE_DESC:{key: "date", order:"desc", label: "Date(Newest)"},
+    DATE_ASC:{key: "date", order:"asc", label: "Date(Oldest)"},
+    ID_DESC:{key: "id", order:"desc", label: "ID(A Fist)"},
+    ID_ASC:{key: "id", order:"asc", label: "ID(Z First)"},
+  }
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("sortType", sortType);
+  }, [sortType]);
 
   // Fetch comments
   useEffect(() => {
@@ -45,6 +60,25 @@ function App() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const sortedComments = [...comments].sort((a, b)=>{
+    const{key, order} = SORT_OPTIONS[sortType];
+
+    let aVal = a[key];
+    let bVal = b[key];
+
+    if(key === "date"){
+      aVal = new Date(aVal);
+      bVal = new Date(bVal);
+    }
+
+    if(aVal < bVal) return order === 'asc' ? -1 : 1;
+    if(aVal > bVal) return order === 'asc' ? 1 : -1;
+
+    return 0;
+
+  });
+
 
   // Add
   const handleAdd = async () => {
@@ -175,7 +209,25 @@ function App() {
         >
           {theme === "dark" ? "🌞 Light Mode" : "🌙 Dark Mode"}
         </button>
+
+        <section className="sort-bar">
+          <label className="sort-label">Sort By:</label>
+
+          <select
+            className = 'sort-select'
+            value = {sortType}
+            onChange = {(e) => setSortType(e.target.value)}>
+
+              {Object.entries(SORT_OPTIONS).map(([value,option])=>
+                (<option key = {value} value = {value}>
+                  {option.label}
+                </option>))}
+
+            </select>
+        </section>
       </header>
+
+      
 
       {/* Composer */}
       <section className="composer">
@@ -206,7 +258,7 @@ function App() {
 
       {/* Comment List */}
       <section className="list">
-        {comments.map((c) => (
+        {sortedComments.map((c) => (
           <article className="comment" key={c.id}>
             <div className="meta">
               <div className="user">
