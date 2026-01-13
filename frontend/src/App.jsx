@@ -120,32 +120,35 @@ function App() {
 
   // Optimistic Like
   const handleLike = async (id) => {
-    // 1. Check local storage to toggle state
+    // 1. Find the target comment from the current state
+    const targetComment = comments.find((c) => c.id === id);
+    if (!targetComment) return;
+
+    // 2. Check local storage to determine if the user has already liked this
     const likedComments = JSON.parse(localStorage.getItem('liked_comments') || '[]');
     const isAlreadyLiked = likedComments.includes(id);
+
+    // 3. Calculate the next value before calling any async functions
+    // This ensures 'nextLikesValue' is defined when the fetch request is built
+    const currentLikes = targetComment.likes || 0;
+    const nextLikesValue = isAlreadyLiked 
+      ? Math.max(0, currentLikes - 1) 
+      : currentLikes + 1;
+
+    // 4. Optimistic UI Update: Update the UI immediately for a snappy feel
+    setComments((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, likes: nextLikesValue } : c))
+    );
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-    let updatedLikesValue;
-
-    // 2. Optimistic UI update (Toggle +1 or -1)
-    setComments((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          updatedLikesValue = isAlreadyLiked ? Math.max(0, (c.likes || 0) - 1) : (c.likes || 0) + 1;
-          return { ...c, likes: updatedLikesValue };
-        }
-        return c;
-      })
-    );
-
     try {
-      // 3. Sending request
+      // 5. Send the PATCH request with the pre-calculated value
       const res = await fetch(`http://localhost:8000/api/comments/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ likes: updatedLikesValue }),
+        body: JSON.stringify({ likes: nextLikesValue }),
         signal: controller.signal,
       });
 
@@ -153,7 +156,7 @@ function App() {
 
       if (!res.ok) throw new Error("Server responded with an error");
 
-      // 4. Update local storage on success
+      // 6. Update local storage only after a successful server response
       const nextLikedState = isAlreadyLiked 
         ? likedComments.filter(favId => favId !== id) 
         : [...likedComments, id];
@@ -161,16 +164,14 @@ function App() {
 
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error("Like failed, rolling back. Reason:", err.name === 'AbortError' ? 'Timeout' : err.message);
+      console.error("Like failed. Reason:", err.name === 'AbortError' ? 'Timeout' : err.message);
 
-      // 5. Rollback UI to previous state
+      // 7. Rollback: If the request fails, revert the UI to the original state
       setComments((prev) =>
-        prev.map((c) =>
-          c.id === id ? { ...c, likes: isAlreadyLiked ? (c.likes || 0) + 1 : Math.max(0, (c.likes || 1) - 1) } : c
-        )
+        prev.map((c) => (c.id === id ? { ...c, likes: currentLikes } : c))
       );
 
-      alert("Failed to update likes. Please check your connection.");
+      alert("Failed to sync likes with the server. Please check your connection.");
     }
   };
 
