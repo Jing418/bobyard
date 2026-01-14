@@ -16,6 +16,184 @@ const formatDate = (isoString) => {
   return `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
 };
 
+const buildTree = (flatList) => {
+  const map = {};
+  const roots = [];
+
+  flatList.forEach((item) => {
+    map[item.id] = { ...item, children: []};
+  });
+
+  flatList.forEach((item) => {
+    if(item.parent && map[item.parent]){
+      map[item.parent].children.push(map[item.id]);
+    }
+    else{
+      roots.push(map[item.id]);
+    }
+  });
+
+  return roots;
+}
+
+const CommentItem = ({
+  c,
+  editingId,
+  editingText,
+  setEditingText,
+  setEditingId,
+  onLike,
+  onDelete,
+  onUpdate,
+  onReply
+}) => {
+
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  
+  return (
+
+    <div
+      className="comment-thread"
+      style={{marginLeft : c.parent? "30px" : "0px"}}
+    >
+
+    <article className="comment">
+      <div className="meta">
+        <div className="user">
+          <div className="avatar">{c.author[0]}</div>
+          <strong>{c.author}</strong>
+        </div>
+        <time>{formatDate(c.date)}</time>
+      </div>
+
+      {editingId === c.id ? (
+        <textarea
+          className="edit-box"
+          value={editingText}
+          onChange={(e) => setEditingText(e.target.value)}
+        />
+      ) : (
+        <p className="content">{c.text}</p >
+      )}
+
+      {c.image && (
+        <a
+          href= "_blank"
+          rel="noopener noreferrer"
+          className="image-wrapper"
+        >
+          < img src={c.image} alt="comment" className="image-thumb" />
+        </a >
+      )}
+
+      <div className="actions">
+        <button
+          className="reaction"
+          onClick={() => onLike(c.id)}
+        >
+          👍 {c.likes}
+        </button>
+
+        {editingId === c.id ? (
+          <>
+            <button
+              className="btn primary small"
+              onClick={() => onUpdate(c.id)}
+            >
+              Save
+            </button>
+            <button
+              className="btn ghost small"
+              onClick={() => setEditingId(null)}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              className="icon edit"
+              title="Reply comment"
+              onClick={() => {
+                setIsReplying(!isReplying);
+              }}
+            >
+              Reply
+            </button>
+
+            <button
+              className="icon edit"
+              title="Edit comment"
+              onClick={() => {
+                setEditingId(c.id);
+                setEditingText(c.text);
+              }}
+            >
+              ✎ Edit
+            </button>
+
+            <button
+              className="icon danger"
+              title="Delete comment"
+              onClick={() => onDelete(c.id)}
+            >
+              🗑 Delete
+            </button>
+          </>
+        )}
+      </div>
+
+      {
+        isReplying && (
+          <div className = "replybox">
+
+            <textarea
+              value = {replyText}
+              onChange = {(e) => setReplyText(e.target.value)}
+            
+            />
+
+            <button onClick={() => {
+              onReply(c.id, replyText);
+              setReplyText("");
+              setIsReplying(false);
+            }}>
+              Post
+            </button>
+          </div>
+        )
+      }
+    </article>
+
+    {
+      c.children && c.children.length > 0 && (
+        <div className = "children">
+          {
+            c.children.map((c) => (
+              <CommentItem
+                key = {c.id}
+                c = {c}
+                editingId = {editingId}
+                editingText = {editingText}
+                setEditingText = {setEditingText}
+                setEditingId = {setEditingId} 
+                onLike = {onLike}
+                onDelete = {onDelete}
+                onUpdate = {onUpdate}
+                onReply = {onReply}
+              />
+            ))
+          }
+        </div>
+      )
+    }
+
+    </div>
+
+  )
+}
+
 function App() {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +276,26 @@ function App() {
     setNewText("");
     setNewImage("");
   };
+
+  // TODO
+  const handleReply = async (parentId, newText) => {
+  if (!newText.trim()) return;
+
+  const res = await fetch("http://localhost:8000/api/comments/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      parent: parentId,
+      text: newText,
+    }),
+  });
+
+  const created = await res.json();
+
+  // ✅ append 到 flat list，保持数据正确
+  setComments((prev) => [...prev, created]);
+};
+
 
   // Edit
   const handleUpdate = async (id) => {
@@ -195,12 +393,14 @@ function App() {
     return <div className="loading">Loading discussions…</div>;
   }
 
+  const treeComments = buildTree(sortedComments);
+
   return (
     <div className="app">
       {/* Header */}
       <header className="hero">
         <h1>Discussion Board</h1>
-        <p>Internal technical feedback and admin comments</p>
+        <p>Internal technical feedback and admin comments</p >
 
         <button
           className="btn ghost theme-toggle"
@@ -259,84 +459,21 @@ function App() {
 
       {/* Comment List */}
       <section className="list">
-        {sortedComments.map((c) => (
-          <article className="comment" key={c.id}>
-            <div className="meta">
-              <div className="user">
-                <div className="avatar">{c.author[0]}</div>
-                <strong>{c.author}</strong>
-              </div>
-              <time>{formatDate(c.date)}</time>
-            </div>
+        {treeComments.map((c) => (
 
-            {editingId === c.id ? (
-              <textarea
-                className="edit-box"
-                value={editingText}
-                onChange={(e) => setEditingText(e.target.value)}
-              />
-            ) : (
-              <p className="content">{c.text}</p>
-            )}
+          <CommentItem
+              key = {c.id}
+              c = {c}
+              editingId = {editingId}
+              editingText = {editingText}
+              setEditingText = {setEditingText}
+              setEditingId = {setEditingId} 
+              onLike = {handleLike}
+              onDelete = {handleDelete}
+              onUpdate = {handleUpdate}
+              onReply = {handleReply}
+            />
 
-            {c.image && (
-              <a
-                href={c.image}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="image-wrapper"
-              >
-                <img src={c.image} alt="comment" className="image-thumb" />
-              </a>
-            )}
-
-            <div className="actions">
-              <button
-                className="reaction"
-                onClick={() => handleLike(c.id)}
-              >
-                👍 {c.likes}
-              </button>
-
-              {editingId === c.id ? (
-                <>
-                  <button
-                    className="btn primary small"
-                    onClick={() => handleUpdate(c.id)}
-                  >
-                    Save
-                  </button>
-                  <button
-                    className="btn ghost small"
-                    onClick={() => setEditingId(null)}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className="icon edit"
-                    title="Edit comment"
-                    onClick={() => {
-                      setEditingId(c.id);
-                      setEditingText(c.text);
-                    }}
-                  >
-                    ✎ Edit
-                  </button>
-
-                  <button
-                    className="icon danger"
-                    title="Delete comment"
-                    onClick={() => handleDelete(c.id)}
-                  >
-                    🗑 Delete
-                  </button>
-                </>
-              )}
-            </div>
-          </article>
         ))}
       </section>
     </div>
